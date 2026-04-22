@@ -1,0 +1,35 @@
+{
+  "name": "valence-web-scrapper",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/scraper.js",
+    "dev": "ts-node src/scraper.ts",
+    "test:proxy": "ts-node src/test-proxy.ts",
+    "delete_queue": "rm -rf storage/request_queues",
+    "delete_sessions": "rm -rf storage/key_value_stores",
+    "postinstall": "playwright install chrome",
+    "test": "jest"
+  },
+  "dependencies": {
+    "crawlee": "^3.16.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.4.2",
+    "playwright": "^1.44.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.19.39",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/_tests_/**/*.test.ts"
+    ]
+  }
+}
