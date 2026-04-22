@@ -1,6 +1,9 @@
 {
   "name": "valence-web-scrapper",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/scraper.js",
