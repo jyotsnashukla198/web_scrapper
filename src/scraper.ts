@@ -134,6 +134,16 @@ async function main(): Promise<void> {
 
   const results: ProductData[] = [];
 
+  // Serialises CSV writes so concurrent requestHandlers don't interleave file output.
+  // Each write is chained onto the previous one; errors propagate to the caller
+  // without breaking the queue for subsequent writes.
+  let csvQueue: Promise<void> = Promise.resolve();
+  function enqueueWrite(data: ProductData): Promise<void> {
+    const write = csvQueue.then(() => writeToCSV([data]));
+    csvQueue = write.catch(() => {});
+    return write;
+  }
+
   let proxyConfiguration: ProxyConfiguration | undefined;
   if (PROXY_ENABLED) {
     const proxyUrls = JSON.parse(fs.readFileSync(PROXIES_PATH, 'utf-8')) as string[];
@@ -194,19 +204,28 @@ async function main(): Promise<void> {
       async ({ page, request }, gotoOptions) => {
         gotoOptions.referer = 'https://www.google.com/';
 
-        // For Walmart: visit the homepage first if this session has no Walmart cookies yet.
-        // This mimics a real user landing on walmart.com before browsing to a product,
-        // giving Akamai's JS sensor time to score the session before the product page loads.
+        // Visit the retailer homepage first if this session has no cookies for that domain yet.
+        // Mimics a real user landing on the site before browsing to a product, giving any
+        // JS-based bot scoring time to build a trusted session before the product page loads.
         const { source } = request.userData as { source: string };
         if (source === 'Walmart') {
           const cookies = await page.context().cookies('https://www.walmart.com');
-          const hasWalmartSession = cookies.some(c => c.name === 'vtc' || c.name === 'abqme');
-          if (!hasWalmartSession) {
+          const hasSession = cookies.some(c => c.name === 'vtc' || c.name === 'abqme');
+          if (!hasSession) {
             await page.goto('https://www.walmart.com', {
               waitUntil: 'domcontentloaded',
               timeout: PAGE_TIMEOUT,
             });
-            // Brief pause so the JS sensor can run on the homepage before we navigate away
+            await page.waitForTimeout(2000 + Math.random() * 1000);
+          }
+        } else if (source === 'Amazon') {
+          const cookies = await page.context().cookies('https://www.amazon.com');
+          const hasSession = cookies.some(c => c.name === 'session-id' || c.name === 'ubid-main');
+          if (!hasSession) {
+            await page.goto('https://www.amazon.com', {
+              waitUntil: 'domcontentloaded',
+              timeout: PAGE_TIMEOUT,
+            });
             await page.waitForTimeout(2000 + Math.random() * 1000);
           }
         }
@@ -270,6 +289,7 @@ async function main(): Promise<void> {
         ? await extractAmazon(page, sku)
         : await extractWalmart(page, sku);
 
+      await enqueueWrite(data);
       results.push(data);
       log.info(`[OK] ${source} | ${sku} | ${data.title.slice(0, 60)}`);
     },
@@ -290,7 +310,6 @@ async function main(): Promise<void> {
   await crawler.run(requests);
 
   if (results.length > 0) {
-    await writeToCSV(results);
     console.log(`\nSaved ${results.length}/${skus.length} records → ${process.env.CSV_PATH ?? 'product_data.csv'}`);
   }
 

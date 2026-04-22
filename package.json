@@ -8,7 +8,7 @@
     "test:proxy": "ts-node src/test-proxy.ts",
     "delete_queue": "rm -rf storage/request_queues",
     "delete_sessions": "rm -rf storage/key_value_stores",
-    "postinstall": "playwright install chrome",
+    "postinstall": "playwright install chromium chrome",
     "test": "jest"
   },
   "dependencies": {

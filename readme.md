@@ -2,10 +2,11 @@
 
 A TypeScript + Playwright scraper built on **Crawlee** that extracts product data (title, price, description, reviews) from **Amazon** and **Walmart** and writes results to a CSV file.
 
-## Setup
+## Quick Start
 
 ```bash
-npm install        # installs dependencies and Chrome via postinstall
+npm install
+npm run dev
 ```
 
 ## Running
@@ -56,7 +57,7 @@ Supported types: `Amazon`, `Walmart`.
 
 ## Output
 
-Successful results are written to `product_data.csv` (appended if the file already exists):
+Each record is written to `product_data.csv` immediately after it is scraped — not at the end of the run. If the scraper crashes or is interrupted mid-run, all records up to that point are already saved. Writes are serialised through a queue so concurrent sessions never interleave output in the file.
 
 | Column | Description |
 |---|---|
